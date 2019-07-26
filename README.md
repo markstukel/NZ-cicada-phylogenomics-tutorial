@@ -5,7 +5,6 @@ This will be a reference for pulling out approximately 500 AHE loci from NZ cica
 
 
 #### Step one: preparing the list of genes
-
 The first thing we want to do is copy the full list of genes from Eric's folder into our own folder.
 ```
 mkdir fullAHEloci
@@ -51,7 +50,6 @@ Now every file in this folder has the sequence headers formatted the way that we
 
 
 #### Step 2: Preparing our query sequences
-
 Now that our sequence headers only have the genus name, we can run a script in Eric's folder that takes a specific taxon, searches for that taxon in all the fasta files, and creates a new folder containing those fasta files that contain that taxon with all other taxa removed. Before we run the script, we need to create a new file called taxontokeep containing the name of the taxon of interest. Since we are investigating New Zealand cicadas, we will use the genus Kikihia as it is the only New Zealand cicada in this dataset and it is also the only cicada most closely related to Maoricicada in this dataset.
 ```
 nano taxontokeep
@@ -84,6 +82,8 @@ python /home/CAM/egordon/scripts/taxon_regroup.py -seqlen .
 The reorganized files are in a new folder called regrouped. We now have a full list of queries to blast against our assemblies.
 
 
+
+#### Step 3: BLAST
 
 
 
