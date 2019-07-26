@@ -84,6 +84,37 @@ The reorganized files are in a new folder called regrouped. We now have a full l
 
 
 #### Step 3: BLAST
+Before we blast our queries against our assemblies, we need to make sure that our assemblies have blast databases associated with them. You need to have a folder that contains all of your contigs.fasta files from each of your assemblies named based on the sample number. Look in that folder, and if each of the <sample>contigs.fasta files also has a <sample>contigs.fasta.nhr, .nin, and .nsq file, you have already formatted them as blast databases. If you need a reminder on how that step is done, it is something like this:
+```
+module load blast
+for x in *.fasta; do makeblastdb -in $x -dbtype nucl; done
+```
+If your folder has already been formatted to contain blast databases, you can now submit a job that uses Eric's folder blast script. For reference, the folder blast script takes your folder of reorganized files (to be used as queries), your folder with your blast databases, and a file listing the assemblies it is going to use. To make that list, in your regrouped folder run the following:
+```
+ls <path to folder containing assemblies formatted as blast databases>/*.fasta > LIST
+sed -i -r 's/.+I/I/g' LIST
+```
+The sed command is to remove the extra folder path information that ls prints into LIST that will mess up the folder blast script. You can use RegExr to customize it until it removes the folder path information before the actual name of the file.
 
+Once you have that list, create or modify a script to look something like this and submit it.
+```
+#!/bin/bash
+#SBATCH --job-name=blast
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH -c 12
+#SBATCH --partition=general
+#SBATCH --qos=general
+#SBATCH --mem=50G
+#SBATCH --mail-type=END
+#SBATCH --mail-user=mark.stukel@uconn.edu
+#SBATCH -o myscript_%j.out
+#SBATCH -e myscript_%j.err
+module load blast
+cd <your filepath>/fullAHEloci/rmtaxaout/regrouped/
+bash /home/CAM/egordon/scripts/folder_blast.sh ./ <your folder with your blast databses> 1e-10 tblastx 12 y LIST
+```
+ 
+ 
 
 
