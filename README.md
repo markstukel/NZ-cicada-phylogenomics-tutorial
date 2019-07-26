@@ -48,8 +48,7 @@ for x in *.fasta; do sed -i -r 's/>\w+Cicadidae_/>/g' $x; sed -i -r 's/_\w+//g' 
 ```
 Now every file in this folder has the sequence headers formatted the way that we want them.
 
-
-
+------
 
 #### Step 2: Preparing our query sequences
 
