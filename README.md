@@ -147,3 +147,34 @@ bash /home/CAM/egordon/scripts/align.sh ./ einsi adjust 8 y
 This script will take a while as well.
 
 
+#### Step 5: Visualizing the alignments
+Inside the realigned folder, you will see all the newly aligned genes. Instead of looking at each of the 500+ files individually, we can run an R script that outputs a nice visualization of the alignments so we can quickly see how well the taxa are aligned for each gene. Because of recent changes to how R is set up on the cluster, we need to install the necessary packages into our own folder before we run the script. We should have done this already, but here is what we did as a reference.
+```
+mkdir ~/R-libs #this is the directory that the packages we install will be stored
+module load R
+R #starts an interactive session of R
+install.packages("ape", repos="http://cran.r-project.org", lib="~/R_libs/")
+install.packages("phangorn", repos="http://cran.r-project.org", lib="~/R_libs/")
+install.packages("seqinr", repos="http://cran.r-project.org", lib="~/R_libs/")
+q() #quits interactive session
+```
+The final preparation step is to make sure the alignment script loads these packages from our ~/R_libs folder. I have already done this in my folder, but basically what you need to do is edit the script to change all instances of
+```
+library(<package>)
+```
+with
+```
+library(<package>, lib="~/R_libs")
+```
+To run the R script, we need to be on a compute node instead of the head node. To do this, run
+```
+srun -c 1 --partition=general --qos=general --mem=2G --pty bash
+```
+Technically you should be running interactive jobs on a compute node instead of the head node, but it looks like R requires you to be one one in order to actually run properly. You can return to the head node at any time by typing "exit".
+
+You can now run the R script. You can change the number at the end to adjust how many alignments will be displayed per .png file, which changes how many files get created to view all the alignments.
+```
+Rscript /home/CAM/egordon/scripts/view_DNAalignments.R -d . 30
+```
+You can now download and view the resulting .png files to assess how good your alignments are!
+
