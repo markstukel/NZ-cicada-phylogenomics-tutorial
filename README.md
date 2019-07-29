@@ -174,7 +174,7 @@ Technically you should be running interactive jobs on a compute node instead of 
 
 You can now run the R script. You can change the number at the end to adjust how many alignments will be displayed per .png file, which changes how many files get created to view all the alignments.
 ```
-Rscript /home/CAM/egordon/scripts/view_DNAalignments.R -d . 30
+Rscript /home/CAM/mstukel/scripts/view_DNAalignments.R -d . 30
 ```
 You can now download and view the resulting .png files to assess how good your alignments are!
 
