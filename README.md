@@ -172,6 +172,12 @@ srun -c 1 --partition=general --qos=general --mem=2G --pty bash
 ```
 Technically you should be running interactive jobs on a compute node instead of the head node, but it looks like R requires you to be one one in order to actually run properly. You can return to the head node at any time by typing "exit".
 
+An issue that the script sometimes runs into is empty files. Before you run the script, check to see if there are any loci that do not have any sequences in them. 
+```
+du *.fas
+```
+This will display the filesize in kB for each alignment. View any alignment that is <10 kB with cat to check if it is empty. If there are any empty files, remove them using rm before running the script.
+
 You can now run the R script. You can change the number at the end to adjust how many alignments will be displayed per .png file, which changes how many files get created to view all the alignments.
 ```
 Rscript /home/CAM/mstukel/scripts/view_DNAalignments.R -d . 30
