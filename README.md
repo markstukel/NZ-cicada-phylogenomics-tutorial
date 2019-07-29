@@ -96,7 +96,7 @@ sed -i -r 's/.+I/I/g' LIST
 ```
 The sed command is to remove the extra folder path information that ls prints into LIST that will mess up the folder blast script. You can use RegExr to customize it until it removes the folder path information before the actual name of the file.
 
-Once you have that list, create or modify a script to look something like this and submit it.
+Once you have that list, create or modify a script to look something like this and submit it. It will take a while to run.
 ```
 #!/bin/bash
 #SBATCH --job-name=blast
@@ -114,7 +114,36 @@ module load blast
 cd <your filepath>/fullAHEloci/rmtaxaout/regrouped/
 bash /home/CAM/egordon/scripts/folder_blast.sh ./ <your folder with your blast databses> 1e-10 tblastx 12 y LIST
 ```
- 
- 
+
+
+#### Step 4: Parsing the BLAST results
+Once the script finishes, you should have a number of .blast files in your regrouped folder. Create a blast results folder and move them there for the blast parser script later.
+```
+mkdir blastresults
+for x in *.blast; do mv $x blastresults/$x; done
+```
+
+Now it's time to run the blast parser script. This script takes the folder with the blast results, the folder with all the assemblies (you can use the blast databases folder), the folder with the blast queries, an e-value cutoff, an option for how much sequence to extract, and how many blast hits to extract per query. We will be using the -me500 option, which extracts a 500 nucleotide buffer on each side of the blast hit for multiple .blast files, which seems to be a good buffer for aligning the extracted hits later. You can see the other options by running the script without any arguments.
+```
+module load python/2.7.8
+python /home/CAM/egordon/scripts/alexblastparser.py blastresults/ <folder with contigs.fasta files> ./ 1 -me500 1
+```
+There should now be a new folder called modified containing the extracted hits. They are organized according to query sequence, with the top hit from all the samples. Lets use the alignment program mafft implemnted in another script that takes the arguments folder with fasta file, algorithm(ginsi einsi linsi), whether to adjust directions or not (adjust, noadjust, slow) , and number of threads. Aligned files are output to "realigned" folder. Inside the new modified folder, create and run a script that looks something like this:
+```
+#!/bin/bash
+#SBATCH --job-name=align
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH -c 8
+#SBATCH --partition=general
+#SBATCH --qos=general
+#SBATCH --mem=50G
+#SBATCH --mail-type=END
+#SBATCH --mail-user=mark.stukel@uconn.edu
+#SBATCH -o myscript_%j.out
+#SBATCH -e myscript_%j.err
+bash /home/CAM/egordon/scripts/align.sh ./ einsi adjust 8 y
+```
+This script will take a while as well.
 
 
