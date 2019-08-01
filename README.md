@@ -84,7 +84,7 @@ The reorganized files are in a new folder called regrouped. We now have a full l
 
 
 #### Step 3: BLAST
-Before we blast our queries against our assemblies, we need to make sure that our assemblies have blast databases associated with them. You need to have a folder that contains all of your contigs.fasta files from each of your assemblies named based on the sample number. Look in that folder, and if each of the <sample>contigs.fasta files also has a <sample>contigs.fasta.nhr, .nin, and .nsq file, you have already formatted them as blast databases. If you need a reminder on how that step is done, it is something like this:
+Before we blast our queries against our assemblies, we need to make sure that our assemblies have blast databases associated with them. You need to have a folder that contains all of your contigs.fasta files from each of your assemblies named based on the sample number. Look in that folder, and if each of the <sample>contigs.fasta files also has a <sample>contigs.fasta.nhr, .nin, and .nsq file, you have already formatted them as blast databases. This should be the same folder that we had for the blast databases when we ran through this the last time. If you need a reminder on how that step is done, it is something like this:
 ```
 module load blast
 for x in *.fasta; do makeblastdb -in $x -dbtype nucl; done
