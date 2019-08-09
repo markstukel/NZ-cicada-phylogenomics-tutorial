@@ -184,3 +184,25 @@ Rscript /home/CAM/mstukel/scripts/view_DNAalignments.R -d . 30
 ```
 You can now download and view the resulting .png files to assess how good your alignments are!
 
+#### Step 6: obtaining summary statistics on alignments
+Something that we will need to periodically do throughout our trimming process is get summary statistics about our alignment, usually in the form of average number of taxa per aligment and average alignment length. We will use some for loops and an awk command to do this.
+
+To calculate the average number of taxa among our alignments, we first write a for loop counting up all the lines that had a blast result (have ".fasta" in the sequence header) and appending them to the end of a "stats" file.
+```
+for x in *.fas; do grep '.fasta' $x | wc -l >> stats; done
+```
+Now we run the awk command to find the mean for all the loci. This command adds together all the values in the first column and then divides the total by the number of rows.
+```
+awk '{ total += $1 } END { print total/NR }' stats > summarystats
+```
+This command is super useful in other contexts for averaging a column of data in different tables. To change what column it is averaging, change "$1" to whatever number your column of interest is.
+
+Now we will get the alignment lengths. The best way for this is to find the length of the longest line in each alignment with the -L flag in wc.
+```
+for x in *.fas; do wc -L $x >> length; done
+```
+Now run the same awk command above and append it to the end of summary stats.
+```
+awk '{ total += $1 } END { print total/NR }' length >> summarystats
+```
+We now have a summary stats file with the average dimensions (in rows and columns) of all our alignments!
