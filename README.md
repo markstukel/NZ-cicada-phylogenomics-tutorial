@@ -212,7 +212,7 @@ We now have a summary stats file with the average dimensions (in rows and column
 #### Step Whatever: removing query sequences from the files
 Our problem is that we have a bunch of not-particularly-related query sequences in our files that we would like to remove so that it does not screw up our HmmCleaner analysis. We will be using the removeTaxa.py script that we used way back when to do it.
 
-One quick thing we should do before we start is clean up the header names of sequences that were reversed. MAFFT puts a "_R_" in front of sequences that it reverses during the alignment process. We shouldn't have too many of those, but it should be easy to get rid of those characters using ```sed```.
+One quick thing we should do before we start is clean up the header names of sequences that were reversed. MAFFT puts a "\_R _\" in front of sequences that it reverses during the alignment process. We shouldn't have too many of those, but it should be easy to get rid of those characters using ```sed```.
 ```
 for x in *.fas; do sed -i 's/_R_//' $x; done
 ```
