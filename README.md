@@ -212,4 +212,27 @@ We now have a summary stats file with the average dimensions (in rows and column
 #### Step Whatever: removing query sequences from the files
 Our problem is that we have a bunch of not-particularly-related query sequences in our files that we would like to remove so that it does not screw up our HmmCleaner analysis. We will be using the removeTaxa.py script that we used way back when to do it.
 
-Our first step will be to make a list of all the fasta file headers. We will then narrow this down to just the taxa we want to remove. It should be easy to do this using ```grep``` and a ```for``` loop.
+One quick thing we should do before we start is clean up the header names of sequences that were reversed. MAFFT puts a "_R_" in front of sequences that it reverses during the alignment process. We shouldn't have too many of those, but it should be easy to get rid of those characters using ```sed```.
+```
+for x in *.fas; do sed -i 's/_R_//' $x; done
+```
+Our next step will be to make a list of all the fasta file headers. We will then narrow this down to just the taxa we want to remove. It should be easy to do this using ```grep```. ```grep``` prints the line that contains the string you are searching for, so we can just search for the ">" that starts each header line and append the output to a list of all the headers.
+```
+for x in *.fas; do grep '>' $x; >> headerlist; done
+```
+One problem that we have is that our headerlist file is huge and full of duplicates from all the different files. We can use an ```awk``` command that I found to remove the duplicates and put the output to a new file.
+```
+awk '!seen[$0]++' headerlist > taxatoremove
+```
+You can look at the taxatoremove file to see that the duplicates have been removed. Now we want remove all the taxon names from this file that correspond to taxa from our assemblies (we want to keep these, so we are removing them from this list of taxa to remove). Since all of the taxon names that come from our assemblies have "contigs.fasta" in the name, a ```sed``` command should be sufficient.
+```
+sed -i '/contigs.fasta/d' taxatoremove
+```
+We now have our file listing our taxa to remove. We can now run the removeTaxa.py script with the "exclude" option.
+```
+python /home/FCAM/egordon/scripts/removeTaxa.py -e taxatoremove
+```
+Like before, this creates a new folder called "rmtaxaout" with the output files.
+
+#### Step Whatever+1: HmmCleaner
+You can now move the HmmCleaner script you used to the rmtaxaout folder and run it.
