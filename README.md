@@ -206,3 +206,10 @@ Now run the same awk command above and append it to the end of summary stats.
 awk '{ total += $1 } END { print total/NR }' length >> summarystats
 ```
 We now have a summary stats file with the average dimensions (in rows and columns) of all our alignments!
+
+#### ... ... ... ... ...
+
+#### Step Whatever: removing query sequences from the files
+Our problem is that we have a bunch of not-particularly-related query sequences in our files that we would like to remove so that it does not screw up our HmmCleaner analysis. We will be using the removeTaxa.py script that we used way back when to do it.
+
+Our first step will be to make a list of all the fasta file headers. We will then narrow this down to just the taxa we want to remove. It should be easy to do this using ```grep``` and a ```for``` loop.
