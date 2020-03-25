@@ -239,3 +239,68 @@ We should probably realign the sequences after removing the query sequences, jus
 
 #### Step Whatever+2: HmmCleaner
 You can now move the HmmCleaner script you used to the new realigned folder and run it.
+
+#### Step Whatever+3: Visualizing Hmmcleaned files
+Use the R visualization script just like we did earlier in this tutorial to visualize the cleaned files.
+
+#### Step Whatever+4: Trimming missing data
+We can use the ```customtrim.py``` scripts in my scripts folder to trim missing data off the ends. We will be using the "-%" option, which removes base positions from the ends of the alignments until it gets to a position that has data for a certain percentage of taxa. I was having trouble with this script before because the documentation was very vague, but after reading the script a few times I figured out what was going wrong. We actually specify the _percentage of taxa with missing data_ we want there to be, not _the percentage of taxa without missing data_. When I entered 90% before, it wasn't looking for positions that had 90% no missing data, it was looking for positions that had less than 90% missing data (10% of positions with missing data).
+
+```
+python /home/CAM/mstukel/scripts/customtrim.py . -%.1
+```
+The way the script works is it takes the first 2 characters of "-%.1" and sees that it is the option for percentage, and then it reads the characters afterwards as the proportion of missing data we want to have or less (0.1, or 10%). After the script runs, it creates a "trimmed" folder, where you can re-run the visualization script to inspect its handiwork.
+
+#### Step Whatever+5: Creating species and gene trees
+Now we can actually build trees. We will first build a concatenated tree of all loci that is partitioned by gene. Before we concatenate, we want to change the sequence names from "I-numbercontigs.fasta" to the actual taxon names. In your trimmed folder, create a file called rename.sh and put this command in it:
+```
+counter=0;for f in `cat lookup.txt`;do replace[counter]=$f;counter=$counter+1;done;counter2=0; for ((a=0; a <= $counter-1;a=a+2)); do `sed -i "s/${replace[$a]}/${replace[$a+1]}/g" *.fas` ;done;
+```
+Before running it, we need to have the lookup.txt file. In our Google Drive folder there is a file called lookup.txt. When you download it, it will save as an Excel file by default. After saving it, open it in Excel and save it just as a .txt file. Upload it to your trimmed folder. Now you can just run the script like this:
+```
+bash rename.sh
+```
+It might take a little while.
+
+Now we can concatenate the files together. We can use the concat.py script in my scripts folder to do this.
+```
+python /home/CAM/mstukel/scripts/concat.py . -1
+```
+This option tells the script to not partition by codon, but only by locus. It creates an alignment of taxa in what is called the  "Phylip" format instead of the FASTA format that we have been used to. It also creates what is called a partition file. The partition file identifies what different parts of the alignment are. In this case, it identifies which base positions of the concatenated alignment correspond to which original loci. This is important for creating trees.
+
+We are now ready to create trees. Make a script called concatenatetree.sh and put the following in it (changing the email to yours, of course):
+```
+#!/bin/bash
+#SBATCH --job-name=iqtree
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH -c 16
+#SBATCH --partition=general
+#SBATCH --qos=general
+#SBATCH --mem=50G
+#SBATCH --mail-type=END
+#SBATCH --mail-user=mark.stukel@uconn.edu
+#SBATCH -o myscript_%j.out
+#SBATCH -e myscript_%j.err
+module load iqtree
+iqtree -s COMBINED.phy -spp partitions.prt -bb 1000 -alrt 1000 -nt AUTO -m MFP+MERGE -rcluster 10 -pre maoricicada.merge
+```
+You can type "iqtree --help" before running the script to see what all of the options that I have provided mean. In short, what this script will do is identify which model of DNA evolution is best for each partition (since each locus might be different), and then tries to merge similar partitions together (since some loci might be evolving similarly). This will increase the accuracy of the tree that it creates. As a warning, this script will take a very long time to run (several days), which is why I specified 16 threads.
+
+We also want to run individual gene trees as well. You need the beta version of IQTree for this, which I have installed in my own folder. Before we do so, create a folder inside your trimmed folder called "loci" and copy all of the .fas files into it. Create a second script called locitree.sh in your trimmed folder and put the following in it (changing the email again):
+```
+#!/bin/bash
+#SBATCH --job-name=iqtree2
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH -c 8
+#SBATCH --partition=general
+#SBATCH --qos=general
+#SBATCH --mem=50G
+#SBATCH --mail-type=END
+#SBATCH --mail-user=mark.stukel@uconn.edu
+#SBATCH -o myscript_%j.out
+#SBATCH -e myscript_%j.err
+/home/CAM/mstukel/iqtree-2.0-rc1-Linux/bin/iqtree -S ./loci -nt AUTO -bb 1000 -alrt 1000 -pre maoricicada.loci
+```
+What this script does is goes through all of the fasta files in the loci folder and creates separate gene trees for each one. The files have to all be in a separate folder because IQTree isn't smart enough to only look for fasta files when it looks through a folder. This script will also take a while to run.
