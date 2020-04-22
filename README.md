@@ -240,6 +240,8 @@ We should probably realign the sequences after removing the query sequences, jus
 #### Step Whatever+2: HmmCleaner
 You can now move the HmmCleaner script you used to the new realigned folder and run it.
 
+After HmmCleaner finishes, it will create a bunch of new files with "hmm" in their name in the "realigned" folder you ran the hmmclean.sh script from. Make a new directory called something like "hmmcleaned" and use the ```mv``` command to move all of those files there. You should notice that there are ```.fasta```, ```.log```, and ```.score``` files there. You don't have to worry about the ```.log``` and ```.score``` files. You will need to change the ```.fasta``` files to ```.fas``` files using the ```basename``` command. You can look up the syntax for changing the file extension of a file using ```basename```.
+
 #### Step Whatever+3: Visualizing Hmmcleaned files
 Use the R visualization script just like we did earlier in this tutorial to visualize the cleaned files.
 
