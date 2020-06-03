@@ -207,9 +207,12 @@ awk '{ total += $1 } END { print total/NR }' length >> summarystats
 ```
 We now have a summary stats file with the average dimensions (in rows and columns) of all our alignments!
 
-#### ... ... ... ... ...
+#### Step 7: Splitting paralogs
+We have a problem with paralogs in our alignments. This is caused by issues with the BLAST step earlier. For some loci, the ortholog of the query sequence was not the top BLAST hit for some of the taxa. This could either be caused by the ortholog not being present in that taxon's assembly or by the query sequence having issues like ambiguity codes or being too distant. In either case, the the BLAST parser script took the top hit and included it in the alignment, even though it might not have been orthologous. 
 
-#### Step Whatever: removing query sequences from the files
+The workflow for sorting out these paralogs is as follows: First, scan through the visualized alignments from Step 5 to find alignments were it appears that several sequences do not match the others. Load those alignments into the MAFFT web server and use the phylogenetic tree option to generate a quick NJ tree based on sequence similarity. Examine the tree to see whether the branching pattern makes sense, or if the taxa are divided into two or more distinct monophyletic groups separated by long branches. If the taxa are divided into clades with long branches, take a sequence from each clade and run a blastx search. If the blast results for the sequences from each clade appear to be different proteins, the alignment needs to be split. Divide the alignment into two or more alignments based on the number of paralogs found, with a ".1" after the locus number in the filename for the alignment with the most taxa, a ".2" for the next most, and so on. While we will use the ".2" and ".3" files later after more processing, we can use the ".1" files for now. Copy all the alignment files to a new folder. If an alignment has been split into multiple files, include only the ".1" file in this new folder, not the original or the other paralogs.
+
+#### Step 8: removing query sequences from the files
 Our problem is that we have a bunch of not-particularly-related query sequences in our files that we would like to remove so that it does not screw up our HmmCleaner analysis. We will be using the removeTaxa.py script that we used way back when to do it.
 
 One quick thing we should do before we start is clean up the header names of sequences that were reversed. MAFFT puts a "\_R\_" in front of sequences that it reverses during the alignment process. We shouldn't have too many of those, but it should be easy to get rid of those characters using ```sed```.
@@ -234,18 +237,18 @@ python /home/FCAM/egordon/scripts/removeTaxa.py -e taxatoremove
 ```
 Like before, this creates a new folder called "rmtaxaout" with the output files.
 
-#### Step Whatever+1: Realign
+#### Step 9: Realign
 We should probably realign the sequences after removing the query sequences, just to be sure before we do any serious trimming. Copy your realign script from your "modified" folder up a few folder directories into this folder and run it.
 
-#### Step Whatever+2: HmmCleaner
+#### Step 10: HmmCleaner
 You can now move the HmmCleaner script you used to the new realigned folder and run it.
 
 After HmmCleaner finishes, it will create a bunch of new files with "hmm" in their name in the "realigned" folder you ran the hmmclean.sh script from. Make a new directory called something like "hmmcleaned" and use the ```mv``` command to move all of those files there. You should notice that there are ```.fasta```, ```.log```, and ```.score``` files there. You don't have to worry about the ```.log``` and ```.score``` files. You will need to change the ```.fasta``` files to ```.fas``` files using the ```basename``` command. You can look up the syntax for changing the file extension of a file using ```basename```.
 
-#### Step Whatever+3: Visualizing Hmmcleaned files
+#### Step 11: Visualizing Hmmcleaned files
 Use the R visualization script just like we did earlier in this tutorial to visualize the cleaned files.
 
-#### Step Whatever+4: Trimming missing data
+#### Step 12: Trimming missing data
 We can use the ```customtrim.py``` scripts in my scripts folder to trim missing data off the ends. We will be using the "-%" option, which removes base positions from the ends of the alignments until it gets to a position that has data for a certain percentage of taxa. I was having trouble with this script before because the documentation was very vague, but after reading the script a few times I figured out what was going wrong. We actually specify the _percentage of taxa with missing data_ we want there to be, not _the percentage of taxa without missing data_. When I entered 90% before, it wasn't looking for positions that had 90% no missing data, it was looking for positions that had less than 90% missing data (10% of positions with missing data).
 
 ```
@@ -253,7 +256,7 @@ python /home/CAM/mstukel/scripts/customtrim.py . -%.1
 ```
 The way the script works is it takes the first 2 characters of "-%.1" and sees that it is the option for percentage, and then it reads the characters afterwards as the proportion of missing data we want to have or less (0.1, or 10%). After the script runs, it creates a "trimmed" folder, where you can re-run the visualization script to inspect its handiwork.
 
-#### Step Whatever+5: Creating species and gene trees
+#### Step 13: Creating species and gene trees
 Now we can actually build trees. We will first build a concatenated tree of all loci that is partitioned by gene. Before we concatenate, we want to change the sequence names from "I-numbercontigs.fasta" to the actual taxon names. In your trimmed folder, create a file called rename.sh and put this command in it:
 ```
 counter=0;for f in `cat lookup.txt`;do replace[counter]=$f;counter=$counter+1;done;counter2=0; for ((a=0; a <= $counter-1;a=a+2)); do `sed -i "s/${replace[$a]}/${replace[$a+1]}/g" *.fas` ;done;
@@ -303,6 +306,46 @@ We also want to run individual gene trees as well. You need the beta version of 
 #SBATCH --mail-user=mark.stukel@uconn.edu
 #SBATCH -o myscript_%j.out
 #SBATCH -e myscript_%j.err
-/home/CAM/mstukel/iqtree-2.0-rc1-Linux/bin/iqtree -S ./loci -nt AUTO -bb 1000 -alrt 1000 -pre maoricicada.loci
+/home/CAM/mstukel/iqtree-2.0-rc1-Linux/bin/iqtree -S ./loci -nt AUTO -alrt 1000 -pre maoricicada.loci
 ```
 What this script does is goes through all of the fasta files in the loci folder and creates separate gene trees for each one. The files have to all be in a separate folder because IQTree isn't smart enough to only look for fasta files when it looks through a folder. This script will also take a while to run.
+
+#### Step 14: Collapsing Nodes
+Before we run ASTRAL, we have to use Newick Utilities to collapse low-support nodes to improve ASTRAL's accuracy. Here is the link to the program website: http://cegg.unige.ch/newick_utils. There are older binaries of the program that work with older versions of MacOS (and you could always compile from source if you really really wanted to...), but I think the best course of action is to just install the linux version into your home directory on the cluster. 
+
+Go to your home directory on the cluster with ```cd ~``` and use the ```curl``` command to copy the file like this:
+```
+curl -O http://cegg.unige.ch/pub/newick-utils-1.6-Linux-x86_64-disabled-extra.tar.gz
+```
+Since it is a tar.gz file, we will need to uncompress it. 
+```
+tar -xzvf newick-utils-1.6-Linux-x86_64-disabled-extra.tar.gz
+```
+There should now be a folder in your home directory called "newick-utils-1.6" with the different programs inside it all ready to run. Go back to the folder with your gene tree file. This file should have a list of trees with support values listed in SH-aLRT scores. We will collapse any node that has a score of under 33. 
+```
+~/newick-utils-1.6/src/nw_ed maoricicada.loci.treefile 'i & b < 33' o > maoricicada.loci_collapsed.treefile
+```
+
+#### Step 15: ASTRAL
+Read throught the ASTRAL documentation here to familiarize yourself with the different options: https://github.com/smirarab/ASTRAL/blob/master/astral-tutorial.md
+On the cluster, the ASTRAL file location is stored in the ```$ASTRAL``` path variable, so you don't need to know exactly where it is stored. This means when you run ASTRAL, it will be in the form of ```java -jar $ASTRAL```.
+Use the ```srun``` command to get on a compute node like you did in Step 5 before you run ASTRAL. A quirk about ASTRAL is that it outputs the tree to stdout and the log information to stderr. Make a new folder called ```astral``` and ```cd``` in there. This is where we will store all of our output.
+To create a species tree from your gene trees, run
+```
+java -jar $ASTRAL -i ../maoricicada.loci_collapsed.treefile -o maoricicada.astral.tre 2> maoricicada.astral.log
+```
+(change the filenames/filepaths to match what you have)
+The ```2>``` saves the stderr, which contains the log information. This should take only a couple of minutes. The ASTRAL documentation tells you what the log contains, but one of the more important numbers is the "normalized quartet score". This is the proportion of four-taxon quartets in the gene trees that are satisfied by the species tree. The closer this proportion is to 1, the less discordance there is among your gene trees. 
+There is another option we can run that changes the branch labels. The default branch label is ASTRAL posterior probability, which gives a probability between 0 and 1 that the branch is a real branch. The documentation gives the different options for branch label information. You might be tempted to use ```-t 2``` which gives the full annotation, but I found in practice that the label is too hard to read. This time we will be using ```-t 8```, which gives the alternative quartet topologies.
+```
+java -jar $ASTRAL -i ../maoricicada.loci_collapsed.treefile -o maoricicada.astral_quartets.tre -t 8 2> maoricicada.astral_quartets.log
+```
+Notice that I changed the output and log filenames. Now the branch supports will be three numbers. At any branch in an unrooted tree, there are three possible ways to arrange 4 taxa around it (try it yourself on a piece of scrap paper with 4 taxa labeled A, B, C, and D). The first number shows the proportion of gene tree quartets that support the arrangement of taxa that is currently shown. In an ASTRAL tree, it should be a plurality of the quartets, or else ASTRAL would not choose that arrangement for the tree topology. The other two numbers are the proportions for the other two possible arrangements. This tells you whether most of the gene tree quartets agree with one topology, if there are two topologies that are well-supported, or if there is an almost even split.
+We can also score an existing tree topology using ASTRAL. We use the ```-q``` option for this. Lets score the concatenated tree (change the filepaths/filenames to match what you have).
+```
+java -jar $ASTRAL -q ../maoricicada.merge.treefile -i ../maoricicada.loci_collapsed.treefile -o maoricicada.astral_concat.tre 2> maoricicada.astral_concat.log
+```
+```
+java -jar $ASTRAL -q ../maoricicada.merge.treefile -i ../maoricicada.loci_collapsed.treefile -o maoricicada.astral_concat_quartets.tre -t 8 2> maoricicada.astral_concat_quartets.log
+```
+This will tell you how well your gene trees agree with your concatenated tree. Download all of the .tre files and view them in FigTree.
