@@ -328,6 +328,12 @@ There should now be a folder in your home directory called "newick-utils-1.6" wi
 
 #### Step 15: ASTRAL
 Read throught the ASTRAL documentation here to familiarize yourself with the different options: https://github.com/smirarab/ASTRAL/blob/master/astral-tutorial.md
+
+Load ASTRAL using the module load command
+```
+module load astral
+```
+
 On the cluster, the ASTRAL file location is stored in the ```$ASTRAL``` path variable, so you don't need to know exactly where it is stored. This means when you run ASTRAL, it will be in the form of ```java -jar $ASTRAL```.
 Use the ```srun``` command to get on a compute node like you did in Step 5 before you run ASTRAL. A quirk about ASTRAL is that it outputs the tree to stdout and the log information to stderr. Make a new folder called ```astral``` and ```cd``` in there. This is where we will store all of our output.
 To create a species tree from your gene trees, run
@@ -349,3 +355,30 @@ java -jar $ASTRAL -q ../maoricicada.merge.treefile -i ../maoricicada.loci_collap
 java -jar $ASTRAL -q ../maoricicada.merge.treefile -i ../maoricicada.loci_collapsed.treefile -o maoricicada.astral_concat_quartets.tre -t 8 2> maoricicada.astral_concat_quartets.log
 ```
 This will tell you how well your gene trees agree with your concatenated tree. Download all of the .tre files and view them in FigTree.
+
+#### Step 16: RAxML gene trees
+We used IQ-Tree to generate gene trees in our previous example. While IQ-Tree is really useful for generating trees with lots and lots of DNA sequence data or many, many taxa, it is not usually used to generate trees from individual genes. We can use RAxML, which is a program more commonly used for this purpose, to generate our gene trees. RAxML has a slower algorithm than IQ-Tree, and the models of evolution that it steers you towards picking are more complicated than what IQ-Tree suggests. 
+Create a new folder called ```raxml``` and put the following in a new script in that folder.
+
+```
+#!/bin/bash
+#SBATCH --job-name=raxml
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH -c 8
+#SBATCH --partition=general
+#SBATCH --qos=general
+#SBATCH --mem=50G
+#SBATCH --mail-type=END
+#SBATCH --mail-user=mark.stukel@uconn.edu
+#SBATCH -o myscript_%j.out
+#SBATCH -e myscript_%j.err
+module load RAxML
+cd ../loci
+for x in *.fas; do mkdir ../raxml/$x; cp $x ../raxml/$x; done
+cd ../raxml
+for x in *.fas; do cd $x; raxmlHPC -f a -x 12345 -p 12345 -N 200 -m GTRGAMMA -s $x -n TEST; cd ..; done
+for x in *.fas; do cat $x/RAxML_bipartitions.TEST >> maoricicada.raxml.tre; done
+```
+This script creates a new folder in the raxml folder for each alignment file. It runs RAxML on each alignment file and saves all the output files to the corresponding folder. Finally, it collects all the individual tree files for each gene into a single file. You can now follow Steps 14 and 15 again, except using this file instead of the maoricicada.loci.treefile. Be sure to change the names of your output and log files so that they have raxml in the name so you don't get confused.
+
