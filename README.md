@@ -370,7 +370,7 @@ Create a new folder called ```raxml``` and put the following in a new script in 
 #SBATCH --qos=general
 #SBATCH --mem=50G
 #SBATCH --mail-type=END
-#SBATCH --mail-user=mark.stukel@uconn.edu
+#SBATCH --mail-user=[your email here]
 #SBATCH -o myscript_%j.out
 #SBATCH -e myscript_%j.err
 module load RAxML
