@@ -358,7 +358,8 @@ This will tell you how well your gene trees agree with your concatenated tree. D
 
 #### Step 16: RAxML gene trees
 We used IQ-Tree to generate gene trees in our previous example. While IQ-Tree is really useful for generating trees with lots and lots of DNA sequence data or many, many taxa, it is not usually used to generate trees from individual genes. We can use RAxML, which is a program more commonly used for this purpose, to generate our gene trees. RAxML has a slower algorithm than IQ-Tree, and the models of evolution that it steers you towards picking are more complicated than what IQ-Tree suggests. 
-Create a new folder called ```raxml``` and put the following in a new script in that folder.
+
+In your ```trimmed``` folder, create a new folder called ```raxml``` and put the following in a new script in that folder.
 
 ```
 #!/bin/bash
