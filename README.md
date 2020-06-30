@@ -383,3 +383,43 @@ for x in *.fas; do cat $x/RAxML_bipartitions.TEST >> maoricicada.raxml.tre; done
 ```
 This script creates a new folder in the raxml folder for each alignment file. It runs RAxML on each alignment file and saves all the output files to the corresponding folder. Finally, it collects all the individual tree files for each gene into a single file. You can now follow Steps 14 and 15 again, except using this file instead of the maoricicada.loci.treefile. Be sure to change the names of your output and log files so that they have raxml in the name so you don't get confused.
 
+#### Step 17: SVDQuartets
+This step requires a little bit of setting up. In your ```trimmed``` folder, create a new folder called ```svdquartets```. Use the ```srun``` command to get off the head node and onto an interactive node. In your ```trimmed``` folder, you need to rerun the concat.py script, but this time with the ```-nex``` option instead of ```-1```. This will recreate the COMBINED.phy file (which doesn't really matter), but it will create a partition file in .nex format, which is what is needed going forward. Move the new ```partitions.nex``` file to the ```svdquartets``` folder.
+
+Next, you need to convert your COMBINED.phy file into a nexus file. The quickest way that you can do that with the program PAUP*. Type ```module load paup``` to load the program and then type ```paup``` to start it up. We will be using the ```ToNexus``` command, which does exactly what it sounds like. You can see the options for the command by typing ```tonexus ?``` while paup is running. Run the command ```tonexus fromfile=COMBINED.phy tofile=COMBINED.nex interleaved=yes;```. Make sure there is a semicolon at the end of your command, since that is what paup looks for for the end of commands. Exit paup by typing ```quit``` and move the new COMBINED.nex file to the ```svdquartets folder```.
+
+Now it is time for some manual file editing, unfortunately. In your text editor, do a find/replace to remove the "contigs.fasta" from the end of your taxa names, since that may mess up the way that SVDQuartets will read them in. It doesn't look like you have hyphens in your taxa names, so you don't need to change them to underscores like I had to. Nexus files are organized with ```#nexus``` at the beginning and then a series of blocks initiated with a "begin" statement and ending with an "end" statement. In the ```partitions.nex``` file, copy the "sets" block (everything from "begin sets;" through "end;") and paste it at the end of the ```COMBINED.nex``` file after the "end;" of the data block. This will tell SVDQuartets that you have loci partitions for your concatenated alignment.
+
+Now it is time to make a new nexus file that gives the commands to run SVDQuartets. We will be running SVDQuartets in paup, so this consists of a "paup" block. Create a new file in the ```svdquartets``` folder called ```run.nex``` and paste the following into it:
+```
+#nexus
+
+begin paup;
+	log start replace=yes file=svdq_log.txt;
+	execute COMBINED.nex;
+	svdq evalq=all nthreads=auto bootstrap=multilocus loci=loci;
+	savetrees from=1 to=1 file=maoricicada.svdq.tre brLens=yes supportValues=nodeLabels;
+	log stop;
+end; 
+```
+Going through this file line by line, you can see that it starts by creating a log file that gets overwritten every time you run the file. Next, it inputs the nexus file. It then runs SVDQuartets evaluating all possible quartets and bootstrapping from within each locus based on the loci partition. It finally saves the tree and stops the log.
+
+Finally, create a script file called ```svdq.sh``` with the following:
+```
+#!/bin/bash
+#SBATCH --job-name=svdq
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH -c 4
+#SBATCH --partition=general
+#SBATCH --qos=general
+#SBATCH --mem=2G
+#SBATCH --mail-type=END
+#SBATCH --mail-user=[email here]
+#SBATCH -o myscript_%j.out
+#SBATCH -e myscript_%j.err
+module load paup
+paup -n run.nex
+```
+The -n tells paup that you're not running it interactively and that it should automatically exit after it finishes.
+
