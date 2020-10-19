@@ -423,3 +423,100 @@ paup -n run.nex
 ```
 The -n tells paup that you're not running it interactively and that it should automatically exit after it finishes.
 
+#### Step 18: GC Content Stuff
+Here we can do some subsetting of the data based on GC content. Normally we would subset based on the GC content of the third codon positions, but since we don't have the codon positions determined we can just do the entire gene.
+
+Create a new directory called ```gccontent``` inside the ```trimmed``` folder and copy all of the loci into it. Next, we're going to remove all of the dashes from the loci alignments (which will make them unaligned) and use a program called infoseq in the emboss package on the cluster to calculate GC content for each sequence in the alignment. Run these three commands:
+```
+module load emboss 
+sed -i s/-//g *.fas
+for x in *.fas; do infoseq $x  -pgc -only  -name > $x.stats; done 
+```
+The first command is self explanatory, the second removes the dashes, and the third saves the output for each locus into its own file.
+
+Now that we have a file for each locus, we need to create a script that will calculate the average GC content and the variance in the GC content for each locus and save the results in a single file. This will be our master file that we will use to subset our data. Make a new file called ```GCcalc.py``` that contains the following:
+```
+from Bio import SeqIO
+import glob
+import os
+import csv
+import sys
+#import numpy as np
+
+def find_variance(a):
+
+    n = len(a)
+    mean = sum(a)/n
+    diff_sq = [None] * n
+    denom = n-1
+
+    for i in range(n):
+        diff_sq[i] = (a[i] - mean) ** 2
+
+    return sum(diff_sq)/denom
+
+
+GCvar= {}
+
+GCtable = sys.argv[1]
+
+GCtablefile = open(GCtable, "rU")
+reader = csv.reader(GCtablefile, skipinitialspace=True, delimiter=' ')
+GCdict= {}
+GCvar= {}
+list=[]
+l=0
+GC = 0
+firstline = True
+for row in reader:
+	if firstline:
+		firstline = False
+		continue
+	GC += float(row[1])
+	list.append(float(row[1]))
+	V= find_variance(list)
+	l += 1
+	
+
+new = GC/l
+GCdict[GCtable]=new
+GCvar[GCtable]=V
+
+GCtablefile.close()
+
+for key in GCdict:
+	print key, GCdict[key], GCvar[key]
+```
+
+If you go through this python script line by line, it starts out by defining a function that calculates the variance of a list of numbers. It next takes in a table from the script argument you provide and starts reading it line by line. As it reads, it adds up each line's (each taxon's) GC content and divides by the total number of taxa to get the mean GC content and calls the previously defined function to calculate the variance. It then outputs the name of the file, the mean GC content, and the GC variance, all separated by commas. What we can do now is run a loop over all of the ```*.stats``` files with this python script to generate a ```.csv``` file.
+
+```for x in *.stats; do python GCcalc.py $x >> GCstats.csv; done```
+
+Now that you have the csv file, download it and open it in Excel. You can now sort by mean GC content (column 2) or GC variance (column 3). There should be around 510 total genes in the list (I had 509 genes). After you sort by one of the measurements, you can divide the file into quintiles of around 102 or 103 genes each and make a list of all the genes in each quintile. While there may be an automated way to do this using a program like awk, what I did is just copy all the rows in the first column for each quintile and paste them into a new text file in the folder on the cluster, resulting in a file that had a list of the filenames of all the genes, one on each line. Make sure to have an empty line at the end of the file, because that will help the file parser later. I named each file something like ```20list``` for the lowest mean GC quintile all the way up to ```100list``` for the highest mean GC quintile, and ```var20list``` all the way up to ```var100list``` for the lowest to highest GC variance quintiles. The reason for making these ten different list files is we can use them as input for "while" loops to automatically gather the right data files when subsetting our data. 
+
+For actually subsetting our data, we can run a loop within a loop to get everything done with one script. I'll walk through the two loops separately so that you know what is going on.
+
+The first (or "outside") loop is going to loop over all of the list files so that the same thing gets done to each. It will look something like this:
+```
+for x in 20 40 60 80 100 var20 var40 var60 var80 var100; 
+do mkdir $x;
+[inner loop stuff blah blah blah];
+done
+```
+The second (or "inner") loop is going to take each ```$x``` from the outer loop and iterate over each line in the associated list file, copying the file on that line to the appropriate directory for that list file.
+```
+while read line;
+do cp ../$line $x;
+done < $x'file'
+```
+Remember, we removed the dashes from the files in the folder we are currently in, so we have to go back up to the ```trimmed``` folder to get the aligned files.
+Putting it all together, we have a script that reads:
+```
+for x in 20 40 60 80 100 var20 var40 var60 var80 var100; 
+do mkdir $x;
+while read line;
+do cp ../$line $x;
+done < $x'file';
+done
+```
+You can put the script in a file called ```subset.sh``` and run it with ```bash subset.sh```. With this, you will have ten new directories inside the current folder. Inside each of those folders, you can run a concatenated analysis the same way as in Step 13 above.
