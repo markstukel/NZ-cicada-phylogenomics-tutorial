@@ -527,14 +527,14 @@ We now want to make some ASTRAL trees and get statistics on our GC content subse
 Go to the ```trimmed``` folder that has your subset list files and the directories containing the loci for each subset. We're going to create a new script with the same kind of double bash loop as before, except this one is going to find the RAxML gene tree for each gene on the list and add the tree to a file for that subset. The outside loop of the script will look really similar to the one before, except that this time we are going to be creating a directory to house the gene trees to do ASTRAL analyses inside the directory for each subset.
 ```
 for x in 20 40 60 80 100 var20 var40 var60 var80 var100;
-mkdir $x/astral;
+do mkdir $x/astral;
 [inner loop stuff];
 done
 ```
 The inner loop is going to look like this:
 ```
 while read line;
-cat raxml/$line/RAxML_bipartitions.TEST >> $x/astral/raxml/maoricicada.raxml${x}.tre;
+do cat raxml/$line/RAxML_bipartitions.TEST >> $x/astral/raxml/maoricicada.raxml${x}.tre;
 done < $x'file'
 ```
 The ```${x}``` is a way to tell bash that the variable indicated by the ```$``` is called ```x```, not ```x.tre```. That way we can include the variable name in the name of the file we are creating. For instance, if we are currently on the ```var100``` subset, this inner loop will create a file in the new ```raxml``` directory inside the ```var100``` directory called ```maoricicada.raxmlvar100.tre```.
@@ -542,9 +542,9 @@ The ```${x}``` is a way to tell bash that the variable indicated by the ```$``` 
 Putting the two parts of the loop together, the final script looks like this:
 ```
 for x in 20 40 60 80 100 var20 var40 var60 var80 var100;
-mkdir $x/astral;
+do mkdir $x/astral;
 while read line;
-cat raxml/$line/RAxML_bipartitions.TEST >> $x/astral/raxml/maoricicada.raxml${x}.tre;
+do cat raxml/$line/RAxML_bipartitions.TEST >> $x/astral/raxml/maoricicada.raxml${x}.tre;
 done < $x'file'
 done
 ```
