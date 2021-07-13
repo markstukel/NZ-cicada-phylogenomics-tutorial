@@ -580,3 +580,48 @@ cp /home/FCAM/mstukel/AHE/NZ_cicada_loci/Kikihia/Kiki_nopara_300bpflanks_out/ali
 cp /home/FCAM/mstukel/AHE/NZ_cicada_loci/Kikihia/Kiki_nopara_300bpflanks_out/aligned/filtered/hmmcleaned/aligned/75trimmed/rename.sh .
 ```
 In an interactive session, run the command ```bash rename.sh``` to change the sequence names in all the loci files. This will take a little bit of time. Once it is finished, you have done all the processing steps and are ready for analyses.
+
+#### Step 21: RAxML and ASTRAL
+Inside the ```trimmed``` folder, create a new folder called ```raxml``` and enter it. Create a script called ```raxml.sh``` and paste the following into it:
+```
+#!/bin/bash
+#SBATCH --job-name=raxml
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH -c 8
+#SBATCH --partition=general
+#SBATCH --qos=general
+#SBATCH --mem=50G
+#SBATCH --mail-type=END
+#SBATCH --mail-user=[YOUR EMAIL HERE]
+#SBATCH -o raxml_%j.out
+#SBATCH -e raxml_%j.err
+module load RAxML
+cd ..
+for x in *.fas
+  do mkdir raxml/$x
+  cd raxml/$x
+  raxmlHPC-PTHREADS -T 8 -f a -x 12345 -p 12345 -N 200 -m GTRGAMMA -s ../../$x -n TEST
+  raxmlHPC-PTHREADS -T 8 -f J -t RAxML_bipartitions.TEST -p 12345 -m GTRGAMMA -s ../../$x -n SH
+  cd ..
+  cd ..
+done
+```
+Make sure to change the email before saving it. What this script does is runs RAxML to create gene trees, and then re-scores those gene trees with SH-aLRT scores, which we will use as a cutoff for collapsing nodes. Run this script with ```sbatch```; it will take a while to run. 
+	
+Once the script finishes, paste the following into a new script called ```compile_sh_trees.sh```:
+```
+for x in *.fas
+  do sed -r 's/\):([0-9]+\.[0-9]+)\[([0-9]+)\]/)\2:\1/g' $x/RAxML_fastTreeSH_Support.SH >> maoricicada.raxml_sh.tre
+done
+~/newick-utils-1.6/src/nw_ed maoricicada.raxml_sh.tre 'i & b == 0' o > maoricicada.raxml_sh_collapsed.tre
+```
+This script compiles the trees that are scored with SH-aLRT scores into a single file with the scores in a format that newick_utilities can read, and then runs newick_utilities to collapse all nodes that have a score of 0.
+	
+After running this script, it is time for ASTRAL. Create a folder called ```astral``` inside the ```raxml``` folder and go into it. In there, run the following commands in an interactive session:
+```
+module load astral
+java -jar $ASTRAL -i ../maoricicada.raxml_sh_collapsed.tre -o maoricicada.astral.tre 2> maoricicada.astral.log
+java -jar $ASTRAL -i ../maoricicada.raxml_sh_collapsed.tre -o maoricicada.astral_quartets.tre -t 8 2> maoricicada.astral_quartets.log
+```
+With this, you now have ASTRAL trees with posterior probability and quartet supports.
