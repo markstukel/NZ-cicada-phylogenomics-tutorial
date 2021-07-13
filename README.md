@@ -553,3 +553,30 @@ You can save this script in a file called ```astralsubset.sh``` in the ```trimme
 After it runs, you can follow the directions to collapse the nodes (section 14 above) and run ASTRAL (section 15) on each subset. You don't need to do any fancy quartet analyses or score trees, just run ASTRAL normally. Make sure to name the result file and the log file for each subset something like ```maoricicada.astral_raxml[subset].tre/log``` and download them to the folder you are doing your visualizations from. 
 
 After you have downloaded them, you just need to create two new ```.csv``` files on your own computer to feed into the visualizations. These files will allow you to plot the average gc or variance of each subset against the ASTRAL final normalized quartet score. Make a copy of the ```GCstats.csv``` file that you used earlier to create your subsets. You will be monkeying around with this copy instead of messing up the original. In this copy, sort by gc content in Excel and find the boundaries of the 5 gc content subsets. Use Excel to find the average of the gc content in each subset. Create another Excel file called ```gc_quartet_scores.csv``` and put the average GC content for each subset into a column called "gc". Go to the ASTRAL log file for that subset and copy the Final Normalized Quartet Score and put it in a column called "score". Go back to the copy of the ```GCstats.csv``` file, sort by gc variance, and repeat the above in a file called ```gcvar_quartet_scores.csv```, with the column called "variance" instead of "gc". This should give you two new ```.csv``` files, recording the gc/variance against the quartet score. You can now use these files in the visualization script.
+
+-----------------------------------------------------------	
+####Step 20: Processing loci from new pipeline
+The new Maoricicada loci are in the folder ```/home/FCAM/mstukel/AHE/NZ_cicada_loci/Maoricicada/```. Inside that folder, there are two folders called ```Maori_nopara_noflanks_out``` and ```Maori_nopara_300bpflanks_out```, corresponding to loci without flanks and with flanks, respectively. We will be working on the 300bp flanks folder for now, but we can repeat everything we are doing here on the no-flanks folder as well.
+
+Inside the ```/home/FCAM/mstukel/AHE/NZ_cicada_loci/Maoricicada/Maori_nopara_300bpflanks_out``` folder, there is an ```aligned``` folder. This folder is our starting point. We will first go through all of the loci and remove those that have fewer than 4 taxa, since they cannot form a quartet for ASTRAL. From the ```aligned``` folder starting point, run command ```bash /home/FCAM/mstukel/scripts/exclude_few_taxa.sh```. This is a normal bash script (not a cluster job script), and it will create an ```exclude.log``` file listing the loci it excluded and a ```filtered``` folder containing the loci that have at least 4 taxa.
+
+Moving on to the ```filtered``` folder, it is now time to run hmmcleaner. Before running hmmcleaner, log on to an interactive session (the srun command) and perform the command:
+```
+Rscript /home/FCAM/mstukel/scripts/view_DNAalignments.R -d . 30
+```
+This will run the R visualization script on the alignments before they have been cleaned. Download the resulting .png files to a folder on your local computer. It is now time to run hmmcleaner. Run ```nano /home/FCAM/mstukel/scripts/hmmclean.sh``` to edit the cluster job script for hmmcleaner. You will see that this script has my email. If you want to run it so that it notifies you when it is done instead of me, edit the email line and save it as ```hmmclean_alex.sh``` or something. Now you can run ```sbatch /home/FCAM/mstukel/scripts/hmmclean_alex.sh```. This script will take a long time to run. When it is done, it will create a new folder called ```hmmcleaned```. Go into the folder and re-run the R visualization script in an interactive session and download the .png files to a DIFFERENT folder on your local computer (so that they do not overwrite the images you downloaded previously). This will allow you to do a before and after comparison.
+	
+Once you are in the ```hmmcleaned``` folder, you will need to realign the alignments to get rid of the internal gaps that are created. Again, there is a cluster job script in my ```scripts``` folder that will do this. Just like with the hmmcleaner script, run ```nano /home/FCAM/mstukel/scripts/mafft_align.sh```, edit the email line to your email, save as ```mafft_align_alex.sh```, and run it with ```sbatch```. This will take a little while as well, and it will create a folder called ```aligned```.
+
+Once you are in the ```aligned``` folder, you will need to trim the alignments using the custom trim script. Open an interactive session and run the following:
+```
+python /home/FCAM/mstukel/scripts/customtrim.py . -%.25
+```
+This will create a new folder called ```trimmed``` with alignments trimmed so that there is less than 25% missing data on the ends. 
+	
+Inside the ```trimmed``` folder, it is time to change the sequence headers of the alignments so that they refer to actual taxon names instead of assembly numbers. You will need to copy over two files from the corresponding Kikihia folder. Run the following commands:
+```
+cp /home/FCAM/mstukel/AHE/NZ_cicada_loci/Kikihia/Kiki_nopara_300bpflanks_out/aligned/filtered/hmmcleaned/aligned/75trimmed/lookup.txt .
+cp /home/FCAM/mstukel/AHE/NZ_cicada_loci/Kikihia/Kiki_nopara_300bpflanks_out/aligned/filtered/hmmcleaned/aligned/75trimmed/rename.sh .
+```
+In an interactive session, run the command ```bash rename.sh``` to change the sequence names in all the loci files. This will take a little bit of time. Once it is finished, you have done all the processing steps and are ready for analyses.
