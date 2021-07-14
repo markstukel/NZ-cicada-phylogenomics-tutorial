@@ -560,8 +560,9 @@ The new Maoricicada loci are in the folder ```/home/FCAM/mstukel/AHE/NZ_cicada_l
 
 Inside the ```/home/FCAM/mstukel/AHE/NZ_cicada_loci/Maoricicada/Maori_nopara_300bpflanks_out``` folder, there is an ```aligned``` folder. This folder is our starting point. We will first go through all of the loci and remove those that have fewer than 4 taxa, since they cannot form a quartet for ASTRAL. From the ```aligned``` folder starting point, run command ```bash /home/FCAM/mstukel/scripts/exclude_few_taxa.sh```. This is a normal bash script (not a cluster job script), and it will create an ```exclude.log``` file listing the loci it excluded and a ```filtered``` folder containing the loci that have at least 4 taxa.
 
-Moving on to the ```filtered``` folder, it is now time to run hmmcleaner. Before running hmmcleaner, log on to an interactive session (the srun command) and perform the command:
+Moving on to the ```filtered``` folder, it is now time to run hmmcleaner. Before running hmmcleaner, log on to an interactive session (the srun command) and perform the commands:
 ```
+module load R
 Rscript /home/FCAM/mstukel/scripts/view_DNAalignments.R -d . 30
 ```
 This will run the R visualization script on the alignments before they have been cleaned. Download the resulting .png files to a folder on your local computer. It is now time to run hmmcleaner. Run ```nano /home/FCAM/mstukel/scripts/hmmclean.sh``` to edit the cluster job script for hmmcleaner. You will see that this script has my email. If you want to run it so that it notifies you when it is done instead of me, edit the email line and save it as ```hmmclean_alex.sh``` or something. Now you can run ```sbatch /home/FCAM/mstukel/scripts/hmmclean_alex.sh```. This script will take a long time to run. When it is done, it will create a new folder called ```hmmcleaned```. Go into the folder and re-run the R visualization script in an interactive session and download the .png files to a DIFFERENT folder on your local computer (so that they do not overwrite the images you downloaded previously). This will allow you to do a before and after comparison.
@@ -570,6 +571,7 @@ Once you are in the ```hmmcleaned``` folder, you will need to realign the alignm
 
 Once you are in the ```aligned``` folder, you will need to trim the alignments using the custom trim script. Open an interactive session and run the following:
 ```
+module load python/2.7.8
 python /home/FCAM/mstukel/scripts/customtrim.py . -%.25
 ```
 This will create a new folder called ```trimmed``` with alignments trimmed so that there is less than 25% missing data on the ends. 
